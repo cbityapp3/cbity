@@ -13,6 +13,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface School {
   id: string;
   name: string;
+  subdomain: string;
+  owner_id: string;
   address?: string;
   phone?: string;
   email?: string;

@@ -169,8 +169,8 @@ const LoginPage: React.FC = () => {
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/" className="text-blue-600 hover:text-blue-800 font-medium">
-                Contact us for demo
+              <Link to="/signup" className="text-blue-600 hover:text-blue-800 font-medium">
+                Sign up here
               </Link>
             </p>
           </div>

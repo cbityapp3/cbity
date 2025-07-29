@@ -10,6 +10,7 @@ interface User {
   role: 'super_admin' | 'school_admin' | 'teacher' | 'student';
   school?: string;
   school_id?: string;
+  subdomain?: string;
   avatar?: string;
   profile?: any;
 }
@@ -17,6 +18,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  signup: (userData: any) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   isLoading: boolean;
   useDatabase: boolean;
@@ -86,6 +88,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Re-initialize auth when database mode changes
+  useEffect(() => {
+    initializeAuth();
+  }, [useDatabase]);
+
   const loadUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
       const { data: userProfile, error } = await supabase
@@ -110,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: userProfile.role,
           school: userProfile.school?.name,
           school_id: userProfile.school_id,
+          subdomain: userProfile.school?.subdomain,
           avatar: userProfile.avatar,
           profile: {
             phone: userProfile.phone,
@@ -122,6 +130,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
+    }
+  };
+
+  const signup = async (userData: any): Promise<{ success: boolean; message: string }> => {
+    try {
+      setIsLoading(true);
+      
+      // Check if subdomain is available
+      const { data: existingSchool } = await supabase
+        .from('schools')
+        .select('id')
+        .eq('subdomain', userData.subdomain)
+        .single();
+        
+      if (existingSchool) {
+        return { success: false, message: 'This domain is already taken. Please choose another.' };
+      }
+      
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/verify-email`,
+          data: {
+            name: userData.name,
+            phone: userData.phone
+          }
+        }
+      });
+      
+      if (authError) {
+        return { success: false, message: authError.message };
+      }
+      
+      if (authData.user) {
+        // Create school record
+        const { data: schoolData, error: schoolError } = await supabase
+          .from('schools')
+          .insert([{
+            name: userData.schoolName,
+            subdomain: userData.subdomain,
+            email: userData.email,
+            phone: userData.phone,
+            website: `https://${userData.subdomain}.cbity.shop`,
+            subscription: userData.plan,
+            status: 'pending_verification',
+            owner_id: authData.user.id
+          }])
+          .select()
+          .single();
+          
+        if (schoolError) {
+          // Clean up auth user if school creation fails
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          return { success: false, message: 'Failed to create school. Please try again.' };
+        }
+        
+        // Create user profile
+        const { error: userError } = await supabase
+          .from('users')
+          .insert([{
+            id: authData.user.id,
+            email: userData.email,
+            name: userData.name,
+            role: 'school_admin',
+            school_id: schoolData.id,
+            phone: userData.phone,
+            status: 'pending_verification'
+          }]);
+          
+        if (userError) {
+          return { success: false, message: 'Failed to create user profile. Please contact support.' };
+        }
+        
+        return { 
+          success: true, 
+          message: 'Account created successfully! Please check your email to verify your account.' 
+        };
+      }
+      
+      return { success: false, message: 'Failed to create account. Please try again.' };
+    } catch (error) {
+      console.error('Signup error:', error);
+      return { success: false, message: 'An unexpected error occurred. Please try again.' };
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -171,6 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: 'Dr. Adebayo Olumide',
             role: 'school_admin' as const,
             school: 'Lagos State Model College',
+            subdomain: 'lagosmodel',
             avatar: 'https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
             profile: {
               phone: '+234 802 123 4567',
@@ -185,6 +281,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: 'Mrs. Adunni Fashola',
             role: 'teacher' as const,
             school: 'Lagos State Model College',
+            subdomain: 'lagosmodel',
             avatar: 'https://images.pexels.com/photos/2381069/pexels-photo-2381069.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
             profile: {
               phone: '+234 811 123 4567',
@@ -200,6 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: 'Adebayo Oluwaseun',
             role: 'student' as const,
             school: 'Lagos State Model College',
+            subdomain: 'lagosmodel',
             avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
             profile: {
               phone: '+234 801 123 4567',
@@ -239,7 +337,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, useDatabase, setUseDatabase }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, isLoading, useDatabase, setUseDatabase }}>
       {children}
     </AuthContext.Provider>
   );

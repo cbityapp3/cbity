@@ -6,8 +6,8 @@ import { dataService } from '../../services/dataService';
 const DatabaseToggle: React.FC = () => {
   const { useDatabase, setUseDatabase, user } = useAuth();
 
-  // Only show to super admins
-  if (user?.role !== 'super_admin') {
+  // Only show to super admins and in development
+  if (user?.role !== 'super_admin' || process.env.NODE_ENV === 'production') {
     return null;
   }
 

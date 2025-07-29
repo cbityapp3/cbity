@@ -262,7 +262,7 @@ Message: ${contactForm.message}
               >
                 Get Free Demo
               </button>
-              <Link to="/login" className="btn-secondary border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-semibold">
+              <Link to="/signup" className="btn-secondary border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-semibold">
                 Start Free Trial
               </Link>
             </div>

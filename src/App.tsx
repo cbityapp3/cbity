@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import Dashboard from './pages/Dashboard';
 import ExamInterface from './components/dashboard/ExamInterface';
 import FooterPages from './pages/FooterPages';
@@ -26,6 +28,8 @@ function AppContent() {
         <Route path="/help-center" element={<FooterPages page="help-center" />} />
         <Route path="/status" element={<FooterPages page="status" />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route
           path="/dashboard/*"
           element={user ? <Dashboard /> : <Navigate to="/login" />}
